@@ -1,8 +1,15 @@
 package com.example.escbasicapp;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.strictmode.CredentialProtectedWhileLockedViolation;
 import android.telephony.PhoneNumberUtils;
@@ -30,7 +37,34 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        checkPermissions(); //권한 허용하도록 하는 함수 //오류 안나도록 앱 실행할 때 권한 요청
+
         setUpUI();
+
+        if(phoneNum.getText().length() == 0) {
+            message.setVisibility(View.GONE);
+            backspace.setVisibility(View.GONE);
+        }
+    }
+
+    private void checkPermissions() { //permission 여부 확인 후, 안되어있으면 허용 요청을 보내는 메소드
+        int resultCall = ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE);
+        int resultSms = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS);
+
+        if (resultCall == PackageManager.PERMISSION_DENIED || resultSms == PackageManager.PERMISSION_DENIED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE, Manifest.permission.SEND_SMS}, 1005);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == 1005) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) { //권한 허용 누르면 이 문장 성립
+                Toast.makeText(this, "권한 허용됨", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void setUpUI() { //레이아웃과 변수 연결
@@ -73,25 +107,48 @@ public class MainActivity extends AppCompatActivity {
         message.setOnClickListener(new View.OnClickListener() { //View.OnClickListener 입력할 때 new O 라고 치면 자동완성 가능
             @Override
             public void onClick(View view) {
-                // TODO : 메시지
+                Intent messageIntent = new Intent(MainActivity.this, MessageActivity.class);
+                messageIntent.putExtra("phone_num", phoneNum.getText().toString()); //메시지로 넘어갈 때 전화번호 값 넘어감
+                startActivity(messageIntent);
             }
         });
 
         call.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //TODO : 전화
+
+                //Intent : 화면 전환 정보 저장
+                Intent callIntent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + phoneNum.getText()));
+                startActivity(callIntent);
             }
         });
 
         backspace.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (phoneNum.getText().length() > 0)
-                //    String formatPhoneNum = PhoneNumberUtils.formatNumber(
-                //            phoneNum.getText().subSequence(0, phoneNum.getText().length() - 1).toString(), //한 글자 지우기
-                //            Locale.getDefault().getCountry());
+                if (phoneNum.getText().length() > 0) {
+                    //    String formatPhoneNum = PhoneNumberUtils.formatNumber(
+                    //            phoneNum.getText().subSequence(0, phoneNum.getText().length() - 1).toString(), //한 글자 지우기
+                    //            Locale.getDefault().getCountry());
                     phoneNum.setText(changeToDial(phoneNum.getText().subSequence(0, phoneNum.getText().length() - 1).toString()));
+
+                    if (phoneNum.getText().length() == 0) {
+                        message.setVisibility(View.GONE);
+                        backspace.setVisibility(View.GONE);
+                    }
+                }
+            }
+        });
+
+        backspace.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                phoneNum.setText("");
+
+                message.setVisibility(View.GONE);
+                backspace.setVisibility(View.GONE);
+
+                return true;
             }
         });
 
@@ -106,6 +163,9 @@ public class MainActivity extends AppCompatActivity {
                 //하이픈이 없는 문자가 phoneNum.getText() + input 임. 버튼을 입력하면 원래 입력된 값에 새로운 값을 더하는 것
                 //phoneNum.setText(formatPhoneNum);
                 phoneNum.setText(changeToDial(phoneNum.getText() + input));
+
+                message.setVisibility(View.VISIBLE);
+                backspace.setVisibility(View.VISIBLE);
             }
         });
     }
@@ -124,14 +184,13 @@ public class MainActivity extends AppCompatActivity {
             phoneNum = phoneNum.replace("-", "");
             return phoneNum;
         } else {
-            if (phoneNum.length() > 3 && phoneNum.length() < 8) {
-                phoneNum = phoneNum.replace("-", "");
+            phoneNum = phoneNum.replace("-", "");
+            if (phoneNum.length() > 3 && phoneNum.length() <= 7) {
                 return phoneNum.substring(0, 3) + "-" + phoneNum.substring(3);
-            } else if (phoneNum.length() > 8 && phoneNum.length() < 13) {
-                phoneNum = phoneNum.replace("-", "");
+            } else if (phoneNum.length() > 7 && phoneNum.length() < 12) {
                 return phoneNum.substring(0, 3) + "-" + phoneNum.substring(3, 7) + "-" + phoneNum.substring(7);
-            } else if (phoneNum.length() > 13) {
-                return phoneNum.replace("-", "");
+            } else if (phoneNum.length() > 12) {
+                return phoneNum;
             }
         }
         //전화번호 기준 01033844341
