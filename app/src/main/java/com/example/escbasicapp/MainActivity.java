@@ -33,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton call;
     private ImageButton backspace;
 
+    private TextView name; //전화번호 검색
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +75,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setUpUI() { //레이아웃과 변수 연결
+        name = findViewById(R.id.main_tv_name); //전화번호 검색
+
         addContact = findViewById(R.id.main_ibtn_add); //findViewById 매우 중요! 기억하기
         contact = findViewById(R.id.main_ibtn_contact); //id 이름은 activity종류_타입_기능
         phoneNum = findViewById(R.id.main_tv_phone);
@@ -91,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent addIntent = new Intent(MainActivity.this, AddEditActivity.class);
+                addIntent.putExtra("phone_num", phoneNum.getText().toString()); //연락처 추가할 때 전화번호 값 넘어감
+                addIntent.putExtra("add_edit", "add"); //add인지 edit인지 구별하기 위해
                 startActivity(addIntent);
             }
         });
@@ -143,6 +149,10 @@ public class MainActivity extends AppCompatActivity {
                         backspace.setVisibility(View.GONE);
                     }
                 }
+                findPhone(); //번호 지울 때도 함수 실행
+                if (phoneNum.getText().toString().equals("")) {
+                    name.setText("");
+                }
             }
         });
 
@@ -154,6 +164,7 @@ public class MainActivity extends AppCompatActivity {
                 message.setVisibility(View.GONE);
                 backspace.setVisibility(View.GONE);
 
+                name.setText("");
                 return true;
             }
         });
@@ -172,8 +183,24 @@ public class MainActivity extends AppCompatActivity {
 
                 message.setVisibility(View.VISIBLE);
                 backspace.setVisibility(View.VISIBLE);
+
+                findPhone();
             }
         });
+    }
+
+    private void findPhone () { //전화번호 검색
+       String find = phoneNum.getText().toString().replaceAll("-", "");
+       String findedName = "";
+
+        for (int i = 0; i < DummyData.contacts.size(); i++) {
+            if (DummyData.contacts.get(i).getPhone().replaceAll("-", "").contains(find)) {
+                findedName += " " + DummyData.contacts.get(i).getName();
+            } else {
+                findedName = findedName;
+            }
+        }
+        name.setText(findedName);
     }
 
     private int getResourceID(final String resName, final String resType, final Context ctx) {
